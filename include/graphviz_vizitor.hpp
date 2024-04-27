@@ -3,6 +3,7 @@
 #include "program.hpp"
 
 std::string visit(const NStatementPtr ptr, size_t &id);
+std::string visit(const NBlockPtr ptr, size_t &id);
 
 SIMPLE_VISIT(Number, node.value());
 
@@ -149,39 +150,13 @@ std::string visit(const NPrimaryPtr ptr, size_t &id)
     return std::visit(
         [&id, this_id](const auto node) -> std::string
         {
-            using Node = std::remove_const_t<decltype(node)>;
-
-            if constexpr (std::is_same_v<Node, NStatementPtr>)
-            {
-                const auto l_bracket_id = ++id;
-                const auto l_bracket = std::format("{} [label = \"(\"]", l_bracket_id);
-
-                const auto child_id = ++id;
-                const auto child = visit(node, id);
-
-                const auto r_bracket_id = ++id;
-                const auto r_bracket = std::format("{} [label = \")\"]", r_bracket_id);
-                return std::format(
-                    "{} [label = \"{}\"] {{ {} }} {{ {} }} {{ {} }} {} -- {} {} -- {} {} -- {} ", 
-                    this_id, "primary",
-                    l_bracket,
-                    child,
-                    r_bracket,
-                    this_id, l_bracket_id,
-                    this_id, child_id,
-                    this_id, r_bracket_id
-                );
-            }
-            else
-            {
-                const auto child_id = ++id;
-                return std::format(
-                    "{} [label = \"{}\"] {{ {} }} {} -- {} ", 
-                    this_id, "primary",
-                    visit(node, id),
-                    this_id, child_id
-                );
-            }
+            const auto child_id = ++id;
+            return std::format(
+                "{} [label = \"{}\"] {{ {} }} {} -- {} ", 
+                this_id, "primary",
+                visit(node, id),
+                this_id, child_id
+            );
         },
         *ptr
     );
@@ -475,37 +450,56 @@ std::string visit(const NAssignmentPtr ptr, size_t &id)
     const auto this_id = id;
 
     return std::visit(
-        [&id, this_id] (const NAssignmentV1 node) -> std::string
+        [&id, this_id] (const auto node) -> std::string
         {
-            std::string result = std::format(
-                "{} [label = \"{}\"] ", 
-                this_id, "assignment"
-            );
+            using Node = std::remove_const_t<decltype(node)>;
 
-            const auto name_child_id = ++id;
-            std::format_to(
-                std::back_inserter(result),
-                "{{ {} }} {} -- {} ",
-                visit(node.name(), id),
-                this_id, name_child_id
-            );
+            std::string result;
+            if constexpr (std::is_same_v<Node, NAssignmentV1>)
+            {
+                result = std::format(
+                    "{} [label = \"{}\"] ", 
+                    this_id, "assignment v1"
+                );
 
-            const auto assignment_id = ++id;
-            std::format_to(
-                std::back_inserter(result),
-                "{{ {} [label = \":=\"] }} {} -- {} ",
-                assignment_id,
-                this_id, assignment_id
-            );
+                const auto name_child_id = ++id;
+                std::format_to(
+                    std::back_inserter(result),
+                    "{{ {} }} {} -- {} ",
+                    visit(node.name(), id),
+                    this_id, name_child_id
+                );
 
-            const auto statement_child_id = ++id;
-            std::format_to(
-                std::back_inserter(result),
-                "{{ {} }} {} -- {} ",
-                visit(node.statement(), id),
-                this_id, statement_child_id
-            );
+                const auto assignment_id = ++id;
+                std::format_to(
+                    std::back_inserter(result),
+                    "{{ {} [label = \":=\"] }} {} -- {} ",
+                    assignment_id,
+                    this_id, assignment_id
+                );
 
+                const auto statement_child_id = ++id;
+                std::format_to(
+                    std::back_inserter(result),
+                    "{{ {} }} {} -- {} ",
+                    visit(node.statement(), id),
+                    this_id, statement_child_id
+                );
+            }
+            else if constexpr (std::is_same_v<Node, NAssignmentV2>)
+            {
+                auto child_id = ++id;
+                result = std::format(
+                    "{} [label = \"{}\"] {{ {} }} {} -- {} ",
+                    this_id, "assignment v1",
+                    visit(node.block(), id),
+                    this_id, child_id
+                );
+            }
+            else
+            {
+                static_assert(std::is_same_v<Node, NAssignmentV1>);
+            }
             return result;
         },
         *ptr
@@ -615,33 +609,12 @@ std::string visit(const NBlockPtr ptr, size_t &id)
         [&id, this_id](const NBlockV1 node) -> std::string
         {
             auto child_id = ++id;
-            std::string result = std::format(
+            return std::format(
                 "{} [label = \"{}\"] {{ {} }} {} -- {} ",
                 this_id, "block",
                 visit(node.listAssignment(), id),
                 this_id, child_id
             );
-
-            for (const auto &chunk : node.tail())
-            {
-                child_id = ++id;
-                std::format_to(
-                    std::back_inserter(result),
-                    "{{ {} }} {} -- {} ",
-                    visit(chunk.listAssignment(), id),
-                    this_id, child_id
-                );
-
-                child_id = ++id;
-                std::format_to(
-                    std::back_inserter(result),
-                    "{{ {} }} {} -- {} ",
-                    visit(chunk.listAssignment(), id),
-                    this_id, child_id
-                );
-            }
-
-            return result;
         },
         *ptr
     );

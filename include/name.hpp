@@ -48,7 +48,7 @@ inline NNamePtr parseName(Lexer lexer)
     }
     lexer.next();
 
-    const auto node = std::make_shared<NName>(getNextToken(lexer, " );"));
+    const auto node = std::make_shared<NName>(getNextToken(lexer, " );\n"));
     skip(lexer, " \n");
     return node;
 }

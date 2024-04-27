@@ -4,40 +4,14 @@
 
 class NBlockV1
 {
-private:
-    class Chunk
-    {
-    public:
-        friend class NBlockV1;
-
-        NListAssignmentPtr listAssignment() const
-        {
-            return _list_assignment_ptr;
-        }
-
-    private:
-        NListAssignmentPtr _list_assignment_ptr;
-    };
-
 public:
     NBlockV1(NListAssignmentPtr list_assignment_ptr)
     : _list_assignment_ptr { validate(list_assignment_ptr) }
     {}
 
-    void addChunk(NListAssignmentPtr list_assignment_ptr)
-    {
-        _tail.emplace_back();
-        _tail.back()._list_assignment_ptr = validate(list_assignment_ptr);
-    }
-
     NListAssignmentPtr listAssignment() const
     {
         return _list_assignment_ptr;
-    }
-
-    const std::vector<Chunk> &tail() const
-    {
-        return _tail;
     }
 
 private:
@@ -53,7 +27,6 @@ private:
 
 private:
     NListAssignmentPtr _list_assignment_ptr;
-    std::vector<Chunk> _tail;
 };
 
 struct NBlock : std::variant<NBlockV1>
@@ -64,10 +37,25 @@ using NBlockPtr = std::shared_ptr<NBlock>;
 
 inline NBlockPtr parseBlock(Lexer lexer)
 {
-    NBlockV1 node { parseListAssignment(lexer) };
-    while (not lexer.isEnd())
+    if (lexer.peekNext() != '{')
     {
-        node.addChunk(parseListAssignment(lexer));
+        return nullptr;
     }
+    lexer.next();
+
+    skip(lexer, " \n");
+
+    NBlockV1 node { parseListAssignment(lexer) };
+
+    if (lexer.peekNext() != '}')
+    {
+        throw std::invalid_argument { 
+            std::format("expected \"}}\" at {}, got {}", lexer.pos(), lexer.peekNext())
+        };
+    }
+    lexer.next();
+
+    skip(lexer, " \n");
+    
     return std::make_shared<NBlock>(std::move(node));
 }

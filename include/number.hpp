@@ -42,7 +42,7 @@ inline NNumberPtr parseNumber(Lexer lexer)
     }
     lexer.next();
 
-    const auto node = std::make_shared<NNumber>(getNextToken(lexer, " );"));
+    const auto node = std::make_shared<NNumber>(getNextToken(lexer, " );\n"));
     skip(lexer, " \n");
     return node;
 }

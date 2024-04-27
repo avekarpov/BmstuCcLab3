@@ -29,7 +29,8 @@ std::string parseToGraphvizTree(std::string string)
 
 int main()
 {
-    const auto file_path = std::filesystem::current_path() / "code.xyz";
+    // const auto file_path = std::filesystem::current_path() / "code.xyz";
+    const auto file_path = "/Users/artem.karpov/University/Sem2/Cc/Lab3/code.xyz";
 
     std::cout << file_path << std::endl;
 

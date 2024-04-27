@@ -106,6 +106,8 @@ inline NStatementPtr parseSubstatement(Lexer lexer)
     }
     lexer.next();
 
+    skip(lexer, " \n");
+
     const auto node = parseStatement(lexer);
 
     if (lexer.peekNext() != ')')

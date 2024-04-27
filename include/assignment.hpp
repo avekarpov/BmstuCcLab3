@@ -1,6 +1,11 @@
 #pragma once
 
 #include "statement.hpp"
+#include "block.hpp"
+
+struct NBlock;
+using NBlockPtr = std::shared_ptr<NBlock>;
+NBlockPtr parseBlock(Lexer lexer);
 
 class NAssignmentV1
 {
@@ -46,9 +51,36 @@ private:
     NStatementPtr _statement_ptr;
 };
 
-struct NAssignment : std::variant<NAssignmentV1>
+class NAssignmentV2
 {
-    using std::variant<NAssignmentV1>::variant;
+public:
+    NAssignmentV2(NBlockPtr block_ptr)
+    : _block_ptr { validate(block_ptr) }
+    {}
+
+    NBlockPtr block() const
+    {
+        return _block_ptr;
+    }
+
+private:
+    static NBlockPtr validate(NBlockPtr ptr)
+    {
+        if (ptr == nullptr)
+        {
+            throw std::runtime_error { "expected not null block node" };
+        }
+        
+        return ptr;
+    }
+
+private:
+    NBlockPtr _block_ptr;
+};  
+
+struct NAssignment : std::variant<NAssignmentV1, NAssignmentV2>
+{
+    using std::variant<NAssignmentV1, NAssignmentV2>::variant;
 };
 using NAssignmentPtr = std::shared_ptr<NAssignment>;
 
@@ -64,6 +96,11 @@ inline NAssignmentPtr parseAssignment(Lexer lexer)
         skip(lexer, " \n");
 
         NAssignmentV1 node { name_ptr, parseStatement(lexer) };
+        return std::make_shared<NAssignment>(std::move(node));
+    }
+    if (const auto block_ptr = parseBlock(lexer); block_ptr != nullptr)
+    {
+        NAssignmentV2 node { block_ptr };
         return std::make_shared<NAssignment>(std::move(node));
     }
 

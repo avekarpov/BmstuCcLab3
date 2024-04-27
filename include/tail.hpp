@@ -59,13 +59,9 @@ struct NTail : std::variant<NTailV1, NTailV2>
 
 inline NTailPtr parseTail(Lexer lexer)
 {
-    if (not lexer.isEnd())
+    if (not lexer.isEnd() && lexer.peekNext() == ';')
     {
-        if (lexer.getNext() != ';')
-        {
-            throw std::invalid_argument { "expected ; before assignment" };
-        }
-
+        lexer.next();
         skip(lexer, " \n");
 
         NTailV1 node { parseAssignment(lexer), parseTail(lexer) };
