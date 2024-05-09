@@ -4,26 +4,30 @@
 #include <filesystem>
 
 #include "graphviz_vizitor.hpp"
+#include "polish_attribution.hpp"
 
-void graphviz(const std::string string, const std::string name)
+NProgramPtr parse(std::string string)
 {
+    Lexer lexer { std::move(string) };
+    return parseProgram(lexer);
+}
+
+template <class Ptr>
+void graphviz(Ptr ptr, const std::string_view name)
+{   
+    size_t id = 0;
+    const auto graph = std::format(
+        "strict graph G {{ {} }}", 
+        visit(ptr, id)
+    );
+
     std::system(
         std::format(
             R"(echo '{}' | dot -Tsvg > {}.svg && open -a "Google Chrome" ./{}.svg)",
-            string, 
+            graph, 
             name, 
             name
         ).data()
-    );
-}
-
-std::string parseToGraphvizTree(std::string string)
-{
-    Lexer lexer { std::move(string) };
-    size_t id = 0;
-    return std::format(
-        "strict graph G {{ {} }}", 
-        visit(parseProgram(lexer), id)
     );
 }
 
@@ -38,10 +42,7 @@ int main()
     std::stringstream buffer;
     buffer << file.rdbuf();
 
-    graphviz(
-        parseToGraphvizTree(
-            buffer.str()
-        ),
-        "ast"
-    );
+    auto ptr = parse(buffer.str());
+    // graphviz(ptr, "ast");
+    std::cout << attr(ptr) << std::endl;
 }
